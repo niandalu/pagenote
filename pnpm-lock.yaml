@@ -28,8 +28,8 @@ importers:
         specifier: 2.4.6
         version: 2.4.6(svelte@4.2.20)(vite@5.4.21(@types/node@24.10.0)(lightningcss@1.30.2))
       '@types/chrome':
-        specifier: ^0.0.246
-        version: 0.0.246
+        specifier: ^0.1.27
+        version: 0.1.27
       gulp:
         specifier: ^5.0.0
         version: 5.0.1
@@ -466,8 +466,8 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7
 
-  '@types/chrome@0.0.246':
-    resolution: {integrity: sha512-MxGxEomGxsJiL9xe/7ZwVgwdn8XVKWbPvxpVQl3nWOjrS0Ce63JsfzxUc4aU3GvRcUPYsfufHmJ17BFyKxeA4g==}
+  '@types/chrome@0.1.27':
+    resolution: {integrity: sha512-pkkCb0Ft8X+Igi751POzT+YqchSxUCtB6s4Gs6ttgSj8qzJga/qlJMgSW1mKxuQTW4i0sTqQbqVtzXDS5AU+4A==}
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
@@ -1849,7 +1849,7 @@ snapshots:
       tailwindcss: 4.1.17
       vite: 5.4.21(@types/node@24.10.0)(lightningcss@1.30.2)
 
-  '@types/chrome@0.0.246':
+  '@types/chrome@0.1.27':
     dependencies:
       '@types/filesystem': 0.0.36
       '@types/har-format': 1.2.16

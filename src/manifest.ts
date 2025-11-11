@@ -40,5 +40,5 @@ export default defineManifest({
       matches: [],
     },
   ],
-  permissions: ['sidePanel', 'storage', 'unlimitedStorage'],
+  permissions: ['sidePanel', 'tabs', 'storage', 'unlimitedStorage'],
 })

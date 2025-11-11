@@ -1,29 +1,37 @@
 import { Annotation, AnnotationModel, DomMeta } from '@/shared/model'
 import Highlighter from 'web-highlighter'
 
+const highlighter = new Highlighter()
+
 const pageStorageKey = () => {
   return `${window.location.origin}${window.location.pathname}`
 }
+const currentKey = pageStorageKey()
 
 async function loadAnnotations(): Promise<Annotation[]> {
-  const key = pageStorageKey()
+  const key = currentKey
   // chrome.runtime.sendMessage({ type: 'PAGENOTE:CLEAR', key })
   const response: Annotation[] = await chrome.runtime.sendMessage({
     type: 'PAGENOTE:LOAD',
     key,
   })
+  console.info('[PAGENOTE] loaded annotations', response)
   return response
 }
 
-function drawAnnotations(annotations: Annotation[], highlighter: Highlighter) {
+function drawAnnotations(annotations: Annotation[]) {
   highlighter.removeAll()
   for (const ann of annotations) {
     highlighter.fromStore(ann.startMeta, ann.endMeta, ann.id, ann.text)
   }
 }
 
-async function createAnnotation(startMeta: DomMeta, endMeta: DomMeta, text: string) {
-  const key = pageStorageKey()
+async function createAnnotation(
+  startMeta: DomMeta,
+  endMeta: DomMeta,
+  text: string,
+): Promise<string> {
+  const key = currentKey
   const response = await chrome.runtime.sendMessage({
     type: 'PAGENOTE:CREATE',
     key,
@@ -35,30 +43,47 @@ async function createAnnotation(startMeta: DomMeta, endMeta: DomMeta, text: stri
   return response.id
 }
 
-async function main() {
-  const highlighter = new Highlighter()
-  const annotations = await loadAnnotations()
-  console.info('[PAGENOTE] annotations', annotations)
-  drawAnnotations(annotations, highlighter)
-
-  // Listen for reload messages from background
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === 'PAGENOTE:RELOAD') {
-      loadAnnotations().then((annotations) => drawAnnotations(annotations, highlighter))
-    }
+const reload = () => {
+  loadAnnotations().then((annotations) => drawAnnotations(annotations))
+}
+const debounce = (fn: (...args: any[]) => void, delay: number) => {
+  let timeout: any
+  return (...args: any[]) => {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => fn(...args), delay)
+  }
+}
+const debouncedReload = debounce(reload, 1000)
+const reloadWhenDOMChanged = () => {
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'characterData' || mutation.type === 'childList') {
+        debouncedReload()
+      }
+    })
+  })
+  observer.observe(document.body, {
+    attributes: false,
+    characterData: true,
+    childList: true,
+    subtree: true,
   })
 
-  // Handle clicks on existing highlights to open side panel
-  highlighter.on(Highlighter.event.CLICK, (data) => {
-    if (data && data.id) {
-      chrome.runtime.sendMessage({
-        type: 'PAGENOTE:OPEN_SIDEPANEL',
-        key: pageStorageKey(),
-        id: data.id,
-      })
-    }
-  })
+  return setTimeout(() => {
+    observer.disconnect()
+  }, 5000)
+}
 
+const highlightCurrentSelection = (): Promise<string> => {
+  const selection = window.getSelection()
+  if (selection && !selection.isCollapsed) {
+    const source = highlighter.fromRange(selection.getRangeAt(0))
+    return createAnnotation(source.startMeta, source.endMeta, source.text)
+  }
+  return Promise.resolve('')
+}
+
+const installIconTip = () => {
   let iconElement: HTMLElement | null = null
 
   function showIcon(x: number, y: number) {
@@ -79,11 +104,7 @@ async function main() {
       iconElement.addEventListener('mouseup', (e) => {
         e.stopPropagation()
         e.preventDefault()
-        const selection = window.getSelection()
-        if (selection && !selection.isCollapsed) {
-          const source = highlighter.fromRange(selection.getRangeAt(0))
-          createAnnotation(source.startMeta, source.endMeta, source.text)
-        }
+        highlightCurrentSelection()
         hideIcon()
       })
       document.body.appendChild(iconElement)
@@ -111,6 +132,40 @@ async function main() {
   // Hide icon on other interactions
   document.addEventListener('mousedown', hideIcon)
   document.addEventListener('keydown', hideIcon)
+}
+
+const installKeyMaps = () => {
+  document.addEventListener('keydown', (e) => {
+    if (['∂', 'd'].includes(e.key) && e.altKey) {
+      highlightCurrentSelection()
+    }
+  })
+}
+
+async function main() {
+  reloadWhenDOMChanged()
+  reload()
+
+  // installIconTip()
+
+  // Listen for reload messages from background
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === 'PAGENOTE:RELOAD') {
+      reload()
+    }
+  })
+  // Handle clicks on existing highlights to open side panel
+  highlighter.on(Highlighter.event.CLICK, async (data) => {
+    if (data && data.id) {
+      chrome.runtime.sendMessage({
+        type: 'PAGENOTE:OPEN_SIDEPANEL',
+        key: currentKey,
+        id: data.id,
+      })
+    }
+  })
+
+  installKeyMaps()
 }
 
 main()

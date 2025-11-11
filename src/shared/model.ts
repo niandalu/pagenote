@@ -87,8 +87,12 @@ class AnnotationModel {
   }
 
   async truncate() {
+    if (this.list.length) {
+      return false
+    }
     this.list.length = 0
     await this.save()
+    return true
   }
 
   /**

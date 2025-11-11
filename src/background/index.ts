@@ -36,6 +36,7 @@ type BizRequest =
   | { type: 'PAGENOTE:UPDATE'; key: string; id: string; patch: Partial<Annotation> }
   | { type: 'PAGENOTE:DELETE'; key: string; id: string; deleted: boolean }
   | { type: 'PAGENOTE:CLEAR'; key: string }
+  | { type: 'PAGENOTE:OPEN_SIDEPANEL'; key: string }
 
 const pickModel = async (request: BizRequest, tabId: number) => {
   let model = connectionPool.get(tabId)
@@ -59,6 +60,17 @@ chrome.runtime.onMessage.addListener((request: BizRequest, sender, rawSendRespon
   if (!tabId) {
     sendResponse({ error: 'No tab ID' })
     return
+  }
+
+  if (request.type === 'PAGENOTE:OPEN_SIDEPANEL') {
+    chrome.sidePanel.open({ tabId }).then(() => {
+      chrome.sidePanel.setOptions({
+        tabId,
+        path: 'sidepanel.html',
+        enabled: true,
+      })
+    })
+    return false
   }
 
   pickModel(request, tabId).then(async (model) => {
@@ -99,9 +111,11 @@ chrome.runtime.onMessage.addListener((request: BizRequest, sender, rawSendRespon
         break
       case 'PAGENOTE:CLEAR':
         try {
-          await model.truncate()
-          sendResponse({ success: true })
-          notifyTabs(request.key, { type: 'PAGENOTE:RELOAD' })
+          const successful = await model.truncate()
+          sendResponse({ success: successful })
+          if (successful) {
+            notifyTabs(request.key, { type: 'PAGENOTE:RELOAD' })
+          }
         } catch (error) {
           sendResponse({ error: 'Failed to delete annotation' })
         }
