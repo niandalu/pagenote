@@ -1,4 +1,4 @@
-import { getNodeFromSelectorPath, getNodeSelectorPath } from './dom'
+import { deserializeRange, serializeRange } from './dom'
 
 interface AnnotationFeature {
   // Should be active on which site (e.g., a URL pattern or domain)
@@ -83,17 +83,17 @@ class AnnotationModel {
    * @throws Error if serialization fails (e.g., invalid Range).
    */
   static serializeAnnotation(annotations: Annotation[]): string {
-    const serializable: SerializableAnnotation[] = annotations.map((ann) => ({
-      id: ann.id,
-      site: ann.site,
-      memo: ann.memo,
-      hexColor: ann.hexColor,
-      startNodeSelectorPath: getNodeSelectorPath(ann.range.startContainer),
-      startOffset: ann.range.startOffset,
-      endNodeSelectorPath: getNodeSelectorPath(ann.range.endContainer),
-      endOffset: ann.range.endOffset,
-      deletedAt: ann.deletedAt,
-    }))
+    const serializable: SerializableAnnotation[] = annotations.map((ann) => {
+      const range = serializeRange(ann.range)
+      return {
+        ...range,
+        id: ann.id,
+        site: ann.site,
+        memo: ann.memo,
+        hexColor: ann.hexColor,
+        deletedAt: ann.deletedAt,
+      }
+    })
     return JSON.stringify(serializable)
   }
 
@@ -107,11 +107,7 @@ class AnnotationModel {
   static deserializeAnnotation(text: string): Annotation[] {
     const serializable: SerializableAnnotation[] = JSON.parse(text)
     return serializable.map((ann) => {
-      const startNode = getNodeFromSelectorPath(ann.startNodeSelectorPath)
-      const endNode = getNodeFromSelectorPath(ann.endNodeSelectorPath)
-      const range = document.createRange()
-      range.setStart(startNode, ann.startOffset)
-      range.setEnd(endNode, ann.endOffset)
+      const range = deserializeRange(ann)
       return {
         id: ann.id,
         site: ann.site,

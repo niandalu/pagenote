@@ -36,3 +36,28 @@ export function getNodeFromSelectorPath(path: string): Node {
   if (!element) throw new Error(`Node not found for selector: ${path}`)
   return element
 }
+
+interface SerializedRange {
+  startNodeSelectorPath: string
+  startOffset: number
+  endNodeSelectorPath: string
+  endOffset: number
+}
+
+export function serializeRange(range: Range): SerializedRange {
+  return {
+    startNodeSelectorPath: getNodeSelectorPath(range.startContainer),
+    startOffset: range.startOffset,
+    endNodeSelectorPath: getNodeSelectorPath(range.endContainer),
+    endOffset: range.endOffset,
+  }
+}
+
+export function deserializeRange(range: SerializedRange): Range {
+  const startNode = getNodeFromSelectorPath(range.startNodeSelectorPath)
+  const endNode = getNodeFromSelectorPath(range.endNodeSelectorPath)
+  const newRange = document.createRange()
+  newRange.setStart(startNode, range.startOffset)
+  newRange.setEnd(endNode, range.endOffset)
+  return newRange
+}
