@@ -1,27 +1,28 @@
-import { deserializeRange, serializeRange } from './dom'
+const now = () => Number(new Date())
 
-interface AnnotationFeature {
+export interface DomMeta {
+  parentTagName: string
+  parentIndex: number
+  textOffset: number
+  extra?: unknown
+}
+
+interface Annotation {
+  id: string
+  // original text content
+  text: string
+
   // Should be active on which site (e.g., a URL pattern or domain)
   site: string
+  // memo note
   memo: string
   hexColor: string
-}
 
-interface Annotation extends AnnotationFeature {
-  id: string
-  range: Range
+  startMeta: DomMeta
+  endMeta: DomMeta
 
-  // 0 if not deleted; otherwise, a Unix timestamp (in milliseconds) when it was deleted
-  deletedAt: number
-}
-
-interface SerializableAnnotation extends AnnotationFeature {
-  id: string
-  startNodeSelectorPath: string
-  startOffset: number
-  endOffset: number
-  endNodeSelectorPath: string
-
+  createdAt: number
+  updatedAt: number
   // 0 if not deleted; otherwise, a Unix timestamp (in milliseconds) when it was deleted
   deletedAt: number
 }
@@ -35,10 +36,9 @@ class AnnotationModel {
     this.key = key
   }
 
-  static async init(key?: string): Promise<AnnotationModel> {
-    const localKey = key || AnnotationModel.pageStorageKey()
-    const annotations = await AnnotationModel.loadAnnotations(localKey)
-    return new AnnotationModel(annotations, localKey)
+  static async init(key: string): Promise<AnnotationModel> {
+    const annotations = await AnnotationModel.loadAnnotations(key)
+    return new AnnotationModel(annotations, key)
   }
 
   async save() {
@@ -49,14 +49,19 @@ class AnnotationModel {
     this.list = await AnnotationModel.loadAnnotations(this.key)
   }
 
-  async create(range: Range): Promise<Annotation> {
+  async create(patch: { startMeta: DomMeta; endMeta: DomMeta; text: string }): Promise<Annotation> {
     const id = crypto.randomUUID()
+    const ts = now()
     const annotation: Annotation = {
       id,
       site: this.key,
+      startMeta: patch.startMeta,
+      endMeta: patch.endMeta,
+      text: patch.text,
       memo: '',
       hexColor: '#ffff00',
-      range,
+      createdAt: ts,
+      updatedAt: ts,
       deletedAt: 0,
     }
     this.list.push(annotation)
@@ -65,7 +70,9 @@ class AnnotationModel {
   }
 
   async update(id: string, updater: (a: Annotation) => Annotation): Promise<Annotation[]> {
-    this.list = this.list.map((ann) => (ann.id === id ? updater(ann) : ann))
+    this.list = this.list.map((ann) =>
+      ann.id === id ? { ...updater(ann), updatedAt: now() } : ann,
+    )
     await this.save()
     return this.list
   }
@@ -73,7 +80,14 @@ class AnnotationModel {
   async destroy(id: string, deleted: boolean) {
     const deletedAt = deleted ? +Date.now() : 0
 
-    this.list = this.list.map((ann) => (ann.id === id ? { ...ann, deletedAt } : ann))
+    this.list = this.list.map((ann) =>
+      ann.id === id ? { ...ann, updatedAt: deletedAt, deletedAt } : ann,
+    )
+    await this.save()
+  }
+
+  async truncate() {
+    this.list.length = 0
     await this.save()
   }
 
@@ -85,40 +99,11 @@ class AnnotationModel {
    * @throws Error if serialization fails (e.g., invalid Range).
    */
   static serializeAnnotation(annotations: Annotation[]): string {
-    const serializable: SerializableAnnotation[] = annotations.map((ann) => {
-      const range = serializeRange(ann.range)
-      return {
-        ...range,
-        id: ann.id,
-        site: ann.site,
-        memo: ann.memo,
-        hexColor: ann.hexColor,
-        deletedAt: ann.deletedAt,
-      }
-    })
-    return JSON.stringify(serializable)
+    return JSON.stringify(annotations)
   }
 
-  /**
-   * Deserializes a JSON string back to an array of Annotation objects.
-   * Reconstructs Range objects from selector paths and offsets.
-   * @param text - JSON string of SerializableAnnotation array.
-   * @returns Array of Annotation objects.
-   * @throws Error if deserialization or Range reconstruction fails.
-   */
   static deserializeAnnotation(text: string): Annotation[] {
-    const serializable: SerializableAnnotation[] = JSON.parse(text)
-    return serializable.map((ann) => {
-      const range = deserializeRange(ann)
-      return {
-        id: ann.id,
-        site: ann.site,
-        memo: ann.memo,
-        hexColor: ann.hexColor,
-        range,
-        deletedAt: ann.deletedAt,
-      }
-    })
+    return JSON.parse(text)
   }
 
   /**
@@ -129,9 +114,8 @@ class AnnotationModel {
    */
   static async saveAnnotations(key: string, annotations: Annotation[]): Promise<boolean> {
     try {
-      const localKey = key || AnnotationModel.pageStorageKey()
       const serialized = AnnotationModel.serializeAnnotation(annotations)
-      await chrome.storage.local.set({ [localKey]: serialized })
+      await chrome.storage.local.set({ [key]: serialized })
       return true
     } catch (error) {
       console.error('Failed to save annotations:', error)
@@ -145,11 +129,10 @@ class AnnotationModel {
    * @param key - Optional storage key; defaults to the current page's key.
    * @returns Promise resolving to array of non-deleted Annotation objects.
    */
-  static async loadAnnotations(key?: string): Promise<Annotation[]> {
+  static async loadAnnotations(key: string): Promise<Annotation[]> {
     try {
-      const localKey = key || AnnotationModel.pageStorageKey()
-      const result = await chrome.storage.local.get([localKey])
-      const serialized = result[localKey]
+      const result = await chrome.storage.local.get([key])
+      const serialized = result[key]
       if (!serialized) return []
       const annotations = AnnotationModel.deserializeAnnotation(serialized)
       // Filter out deleted annotations (deletedAt > 0)
@@ -158,14 +141,6 @@ class AnnotationModel {
       console.error('Failed to load annotations:', error)
       return []
     }
-  }
-
-  /**
-   * Generates a storage key based on the current page's origin and pathname.
-   * @returns String key for Chrome storage.
-   */
-  static pageStorageKey(): string {
-    return `${window.location.origin}${window.location.pathname}`
   }
 }
 
