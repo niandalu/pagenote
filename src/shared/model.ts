@@ -70,8 +70,10 @@ class AnnotationModel {
     return this.list
   }
 
-  async destroy(id: string) {
-    this.list = this.list.map((ann) => (ann.id === id ? { ...ann, deletedAt: +Date.now() } : ann))
+  async destroy(id: string, deleted: boolean) {
+    const deletedAt = deleted ? +Date.now() : 0
+
+    this.list = this.list.map((ann) => (ann.id === id ? { ...ann, deletedAt } : ann))
     await this.save()
   }
 
