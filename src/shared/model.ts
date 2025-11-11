@@ -1,4 +1,6 @@
 interface AnnotationFeature {
+  // sholud be active on which site
+  site: string
   memo: string
   hexColor: string
 }

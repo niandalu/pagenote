@@ -27,3 +27,10 @@ Here is the place you can edit, delete and export annotations.
 
 Under annotation management page, you can export annotations to a JSON file.
 
+
+## Design
+
+There are 3 main parts of the extension:
+1. ContentScript, it is in charge of drawing annotations upon texts
+2. BackgroundScript, it is in charge of saving and loading annotations. It syncs annotations between ContentScript and SidePanel
+3. SidePanel, it is in charge of managing annotations, like edit, delete and export annotations

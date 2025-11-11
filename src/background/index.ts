@@ -1,7 +1,13 @@
-console.log('background is running')
+import { Annotation } from '@/shared/model'
 
-chrome.runtime.onMessage.addListener((request) => {
-  if (request.type === 'COUNT') {
-    console.log('background has received a message from popup, and count is ', request?.count)
-  }
-})
+type BizRequest =
+  // load annotations from storage
+  // respond with Annotation[]
+  | { type: 'LOAD'; key: string }
+  // save annotations to storage
+  // respond with Annotation[]
+  | { type: 'SAVE'; key: string; serializedAnnotations: string }
+  // force modules to reload annotations
+  | { type: 'SYNC' }
+
+chrome.runtime.onMessage.addListener((request: BizRequest, _, sendResponse) => {})
