@@ -83,55 +83,43 @@ const highlightCurrentSelection = (): Promise<string> => {
   return Promise.resolve('')
 }
 
-const installIconTip = () => {
-  let iconElement: HTMLElement | null = null
+const installHint = () => {
+  let hintElement: HTMLElement | null = null
 
-  function showIcon(x: number, y: number) {
-    if (!iconElement) {
-      iconElement = document.createElement('div')
-      iconElement.innerHTML = '📝'
-      iconElement.style.position = 'fixed'
-      iconElement.style.zIndex = '10000'
-      iconElement.style.cursor = 'pointer'
-      iconElement.style.background = 'white'
-      iconElement.style.border = '1px solid black'
-      iconElement.style.padding = '5px'
-
-      iconElement.addEventListener('mousedown', (e) => {
-        e.stopPropagation()
-        e.preventDefault()
-      })
-      iconElement.addEventListener('mouseup', (e) => {
-        e.stopPropagation()
-        e.preventDefault()
-        highlightCurrentSelection()
-        hideIcon()
-      })
-      document.body.appendChild(iconElement)
+  function showHint() {
+    if (!hintElement) {
+      hintElement = document.createElement('div')
+      hintElement.innerHTML = 'Press Option+D to highlight'
+      hintElement.style.position = 'fixed'
+      hintElement.style.left = '10px'
+      hintElement.style.bottom = '10px'
+      hintElement.style.zIndex = '10000'
+      hintElement.style.background = 'white'
+      hintElement.style.border = '1px solid black'
+      hintElement.style.padding = '5px'
+      document.body.appendChild(hintElement)
     }
-    iconElement.style.left = `${x + 10}px`
-    iconElement.style.top = `${y - 10}px`
-    iconElement.style.display = 'block'
+    hintElement.style.display = 'block'
   }
 
-  function hideIcon() {
-    if (iconElement) {
-      iconElement.style.display = 'none'
+  function hideHint() {
+    if (hintElement) {
+      hintElement.style.display = 'none'
     }
   }
 
   document.addEventListener('mouseup', (e) => {
     const selection = window.getSelection()
     if (selection && !selection.isCollapsed) {
-      showIcon(e.clientX, e.clientY)
+      showHint()
     } else {
-      hideIcon()
+      hideHint()
     }
   })
 
-  // Hide icon on other interactions
-  document.addEventListener('mousedown', hideIcon)
-  document.addEventListener('keydown', hideIcon)
+  // Hide hint on other interactions
+  document.addEventListener('mousedown', hideHint)
+  document.addEventListener('keydown', hideHint)
 }
 
 const installKeyMaps = () => {
@@ -145,7 +133,7 @@ const installKeyMaps = () => {
 async function main() {
   reload()
 
-  // installIconTip()
+  installHint()
 
   // Listen for reload messages from background
   chrome.runtime.onMessage.addListener((message) => {
