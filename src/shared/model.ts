@@ -80,6 +80,13 @@ class AnnotationModel {
   async destroy(id: string, deleted: boolean) {
     const deletedAt = deleted ? +Date.now() : 0
 
+    // HARD DELETE
+    if (deletedAt) {
+      this.list = this.list.filter((ann) => ann.id !== id)
+      await this.save()
+      return
+    }
+
     this.list = this.list.map((ann) =>
       ann.id === id ? { ...ann, updatedAt: deletedAt, deletedAt } : ann,
     )

@@ -57,9 +57,12 @@
 
 <main class="p-4 bg-gray-100 min-h-screen">
   <h3 class="text-lg font-bold mb-4">My Annotations</h3>
+  {#if annotations.length === 0}
+    <p class="text-lg">No annotations available, select some text and press `option + d`</p>
+  {/if}
   {#each annotations as ann}
     <div class="mb-4 p-2 border border-gray-300 bg-white">
-      <pre class="mb-2">{ann.text}</pre>
+      <p class="mb-2 line-clamp-4">{ann.text}</p>
       <div class="flex space-x-2 justify-between items-center mt-2">
         <div>
           <p class="text-xs text-gray-500">{new Date(ann.updatedAt).toLocaleString()}</p>
