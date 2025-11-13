@@ -19,11 +19,38 @@ export async function deleteAnnotation(key: string, id: string) {
 }
 
 // Jump to annotation location on the page
-export async function jumpToAnnotation(tabId: string, key: string, id: string) {
+export async function jumpToAnnotation(tabId: number, key: string, id: string) {
   await chrome.runtime.sendMessage({
     type: 'PAGENOTE:JUMP',
     tabId,
     key,
     id,
   })
+}
+
+// Jump to annotation location on the page
+export async function openSidepanel(
+  params:
+    | { key: string; page: 'annotation.html'; id: string }
+    | { key: string; winId: number; tabId: number; page: 'sidepanel.html' },
+) {
+  const payload =
+    params.page === 'annotation.html'
+      ? {
+          type: 'PAGENOTE:OPEN_SIDEPANEL',
+          winId: 0,
+          tabId: 0,
+          page: 'annotation.html',
+          key: params.key,
+          id: params.id,
+        }
+      : {
+          type: 'PAGENOTE:OPEN_SIDEPANEL',
+          winId: params.winId,
+          tabId: params.tabId,
+          page: 'sidepanel.html',
+          key: params.key,
+          id: '',
+        }
+  await chrome.runtime.sendMessage(payload)
 }

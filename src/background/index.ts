@@ -17,14 +17,14 @@ function notifyTabs(key: string, message: any) {
   chrome.runtime.sendMessage(message)
 }
 
-chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
-  const enabled = sidePanelOpendTabs.has(tabId)
-  chrome.sidePanel.setOptions({
-    tabId,
-    path: 'sidepanel.html',
-    enabled,
-  })
-})
+// chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
+//   const enabled = sidePanelOpendTabs.has(tabId)
+//   chrome.sidePanel.setOptions({
+//     tabId,
+//     path: 'sidepanel.html',
+//     enabled,
+//   })
+// })
 
 chrome.tabs.onCreated.addListener((tab) => {
   // No action needed on creation; model initialized on first message
@@ -50,7 +50,7 @@ type BizRequest =
   | { type: 'PAGENOTE:UPDATE'; key: string; id: string; patch: Partial<Annotation> }
   | { type: 'PAGENOTE:DELETE'; key: string; id: string; deleted: boolean }
   | { type: 'PAGENOTE:CLEAR'; key: string }
-  | { type: 'PAGENOTE:OPEN_SIDEPANEL'; key: string; id?: string }
+  | { type: 'PAGENOTE:OPEN_SIDEPANEL'; key: string; id?: string; page?: string }
   | { type: 'PAGENOTE:JUMP'; key: string; id: string; tabId: number }
   | { type: 'PAGENOTE:LOAD_ONE'; key: string; id: string }
 
@@ -80,20 +80,24 @@ const pickModel = async (request: BizRequest, senderTabId?: number) => {
   return model
 }
 
+chrome.sidePanel
+  .setPanelBehavior({ openPanelOnActionClick: true })
+  .catch((error) => console.error(error))
+
 chrome.runtime.onMessage.addListener((request: BizRequest, sender, rawSendResponse) => {
   const sendResponse = (response: any) => {
     console.info('[PAGENOTE] sendResponse', response)
     return rawSendResponse(response)
   }
 
-  const tabId = sender.tab?.id
-  const windowId = sender.tab?.windowId
+  const tabId = sender.tab?.id || (request as any).tabId
+  const windowId = sender.tab?.windowId || (request as any).winId
 
   console.info('[PAGENOTE] received', tabId, request)
   if (request.type === 'PAGENOTE:OPEN_SIDEPANEL' && tabId && windowId) {
     chrome.sidePanel.setOptions({
       tabId,
-      path: 'annotation.html',
+      path: request.page,
       enabled: true,
     })
     sidePanelOpendTabs.add(tabId)

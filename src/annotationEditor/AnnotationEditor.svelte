@@ -1,8 +1,13 @@
 <script lang="ts">
   import { useActiveAnnotation, useCurrentKey } from './state'
-  import { deleteAnnotation, jumpToAnnotation, updateAnnotation } from '@/shared/bridge'
+  import {
+    deleteAnnotation,
+    jumpToAnnotation,
+    openSidepanel,
+    updateAnnotation,
+  } from '@/shared/bridge'
   import Button from './Button.svelte'
-  import { getActiveTabId } from '@/shared/helpers'
+  import { getActiveTab, getActiveTabId } from '@/shared/helpers'
 
   const currentKey = useCurrentKey()
   const { annotation: activeAnnotation, reload } = useActiveAnnotation(currentKey)
@@ -42,6 +47,20 @@
       jumpToAnnotation(tabId, $currentKey, $activeAnnotation.id)
     })
   }
+  const goback = () => {
+    getActiveTab().then((tab) => {
+      if (!tab) {
+        return
+      }
+
+      openSidepanel({
+        key: $currentKey,
+        winId: tab.windowId,
+        tabId: tab.id || 0,
+        page: 'sidepanel.html',
+      })
+    })
+  }
 
   $effect(() => {
     chrome.runtime.onMessage.addListener((message) => {
@@ -53,7 +72,10 @@
 </script>
 
 <main class="p-4 bg-gray-100 min-h-screen">
-  <h3 class="text-lg font-bold mb-4">My Annotation</h3>
+  <h3 class="text-lg font-bold mb-4">
+    <button class="cursor-pointer" onclick={goback}>←</button>
+    My Annotation
+  </h3>
   {#if $activeAnnotation}
     <div
       class="mb-4 px-2 py-3 border-0 border-l-4 border border-yellow-300 text-gray-400 line-clamp-3"

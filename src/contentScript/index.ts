@@ -1,4 +1,5 @@
 import type { Annotation, DomMeta } from '@/shared/model'
+import { openSidepanel } from '@/shared/bridge'
 import Highlighter from 'web-highlighter'
 
 const highlighter = new Highlighter()
@@ -153,8 +154,8 @@ async function main() {
   // Handle clicks on existing highlights to open side panel
   highlighter.on(Highlighter.event.CLICK, async (data) => {
     if (data && data.id) {
-      chrome.runtime.sendMessage({
-        type: 'PAGENOTE:OPEN_SIDEPANEL',
+      openSidepanel({
+        page: 'annotation.html',
         key: currentKey,
         id: data.id,
       })

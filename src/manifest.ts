@@ -16,7 +16,7 @@ export default defineManifest({
     128: 'img/logo-128.png',
   },
   action: {
-    default_popup: 'popup.html',
+    default_title: 'Open Side Panel',
     default_icon: 'img/logo-48.png',
   },
   options_page: 'options.html',
@@ -31,9 +31,9 @@ export default defineManifest({
       run_at: 'document_idle',
     },
   ],
-  // side_panel: {
-  //   default_path: 'sidepanel.html',
-  // },
+  side_panel: {
+    default_path: 'sidepanel.html',
+  },
   web_accessible_resources: [
     {
       resources: ['img/logo-16.png', 'img/logo-32.png', 'img/logo-48.png', 'img/logo-128.png'],
