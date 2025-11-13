@@ -1,4 +1,4 @@
-import { Annotation, AnnotationModel, DomMeta } from '@/shared/model'
+import type { Annotation, DomMeta } from '@/shared/model'
 import Highlighter from 'web-highlighter'
 
 const highlighter = new Highlighter()
@@ -22,7 +22,7 @@ async function loadAnnotations(): Promise<Annotation[]> {
 function drawAnnotations(annotations: Annotation[]) {
   highlighter.removeAll()
   for (const ann of annotations) {
-    highlighter.fromStore(ann.startMeta, ann.endMeta, ann.id, ann.text)
+    highlighter.fromStore(ann.startMeta, ann.endMeta, ann.text, ann.id)
   }
 }
 

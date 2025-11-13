@@ -1,5 +1,8 @@
-import { Annotation, AnnotationModel, DomMeta } from '@/shared/model'
+import { AnnotationModel } from '@/shared/model'
+import type { Annotation, DomMeta } from '@/shared/model'
 
+let currentAnnotationId = ''
+const sidePanelOpendTabs = new Set<number>()
 const connectionPool = new Map<number, AnnotationModel>()
 const keyToTabIds = new Map<string, Set<number>>()
 
@@ -11,7 +14,17 @@ function notifyTabs(key: string, message: any) {
       chrome.tabs.sendMessage(tabId, message)
     }
   }
+  chrome.runtime.sendMessage(message)
 }
+
+chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
+  const enabled = sidePanelOpendTabs.has(tabId)
+  chrome.sidePanel.setOptions({
+    tabId,
+    path: 'sidepanel.html',
+    enabled,
+  })
+})
 
 chrome.tabs.onCreated.addListener((tab) => {
   // No action needed on creation; model initialized on first message
@@ -19,6 +32,7 @@ chrome.tabs.onCreated.addListener((tab) => {
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   connectionPool.delete(tabId)
+  sidePanelOpendTabs.delete(tabId)
   for (const [key, tabIds] of keyToTabIds) {
     tabIds.delete(tabId)
     if (tabIds.size === 0) {
@@ -36,9 +50,23 @@ type BizRequest =
   | { type: 'PAGENOTE:UPDATE'; key: string; id: string; patch: Partial<Annotation> }
   | { type: 'PAGENOTE:DELETE'; key: string; id: string; deleted: boolean }
   | { type: 'PAGENOTE:CLEAR'; key: string }
-  | { type: 'PAGENOTE:OPEN_SIDEPANEL'; key: string }
+  | { type: 'PAGENOTE:OPEN_SIDEPANEL'; key: string; id?: string }
+  | { type: 'PAGENOTE:LOAD_ONE'; key: string; id: string }
 
-const pickModel = async (request: BizRequest, tabId: number) => {
+async function getActiveTabId() {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (tabs && tabs.length > 0) {
+    return tabs[0].id // This is the ID of the active tab
+  }
+  return
+}
+
+const pickModel = async (request: BizRequest, senderTabId?: number) => {
+  const tabId = senderTabId || (await getActiveTabId())
+  if (!tabId) {
+    return
+  }
+
   let model = connectionPool.get(tabId)
   if (!model || model.key !== request.key) {
     model = await AnnotationModel.init(request.key)
@@ -56,29 +84,35 @@ chrome.runtime.onMessage.addListener((request: BizRequest, sender, rawSendRespon
     console.info('[PAGENOTE] sendResponse', response)
     return rawSendResponse(response)
   }
-  const tabId = sender.tab?.id
-  if (!tabId) {
-    sendResponse({ error: 'No tab ID' })
-    return
-  }
 
-  if (request.type === 'PAGENOTE:OPEN_SIDEPANEL') {
-    chrome.sidePanel.open({ tabId }).then(() => {
-      chrome.sidePanel.setOptions({
-        tabId,
-        path: 'sidepanel.html',
-        enabled: true,
-      })
+  const tabId = sender.tab?.id
+  const windowId = sender.tab?.windowId
+
+  console.info('[PAGENOTE] received', tabId, request)
+  if (request.type === 'PAGENOTE:OPEN_SIDEPANEL' && tabId && windowId) {
+    chrome.sidePanel.setOptions({
+      tabId,
+      path: 'annotation.html',
+      enabled: true,
     })
-    return false
+    sidePanelOpendTabs.add(tabId)
+    chrome.sidePanel.open({ windowId, tabId })
+    currentAnnotationId = request.id || ''
+    return true
   }
 
   pickModel(request, tabId).then(async (model) => {
-    console.info('[PAGENOTE] received', tabId, request)
+    if (!model) {
+      return
+    }
     switch (request.type) {
+      case 'PAGENOTE:LOAD_ONE': {
+        const activeId = request.id || currentAnnotationId
+        sendResponse(model.list.find((one) => one.id === activeId))
+        break
+      }
       case 'PAGENOTE:LOAD':
         await model.reload()
-        console.log('[PAGENOTE] loaded annotations', model.list, +new Date())
         sendResponse(model.list)
         break
       case 'PAGENOTE:CREATE':
