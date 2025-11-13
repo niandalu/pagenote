@@ -31,15 +31,15 @@ export async function jumpToAnnotation(tabId: number, key: string, id: string) {
 // Jump to annotation location on the page
 export async function openSidepanel(
   params:
-    | { key: string; page: 'annotation.html'; id: string }
+    | { key: string; page: 'annotation.html'; id: string; winId?: number; tabId?: number }
     | { key: string; winId: number; tabId: number; page: 'sidepanel.html' },
 ) {
   const payload =
     params.page === 'annotation.html'
       ? {
           type: 'PAGENOTE:OPEN_SIDEPANEL',
-          winId: 0,
-          tabId: 0,
+          winId: params.winId,
+          tabId: params.tabId,
           page: 'annotation.html',
           key: params.key,
           id: params.id,
