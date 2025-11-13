@@ -1,5 +1,5 @@
 import type { Annotation } from '@/shared/model'
-import type { Writable } from 'svelte/store'
+import type { Readable, Writable } from 'svelte/store'
 import { derived, writable } from 'svelte/store'
 
 async function getCurrentKey(): Promise<string> {
@@ -21,20 +21,29 @@ const useCurrentKey = () => {
 }
 
 const useActiveAnnotation = (key: Writable<string>) => {
-  const annotation = derived([key], ([$key], set) => {
+  let lastKey = ''
+  const annotation = writable<Annotation | undefined>(undefined)
+
+  const reload = (k?: string) => {
+    const ck = k || lastKey
+    if (!ck) {
+      annotation.set(undefined)
+    }
+    lastKey = ck
+
     chrome.runtime.sendMessage(
       {
         type: 'PAGENOTE:LOAD_ONE',
-        key: $key,
+        key: ck,
       },
-      (v: Annotation | undefined) => {
-        console.log('onnnnnnnne', v)
-        set(v)
-      },
+      (v: Annotation | undefined) => annotation.set(v),
     )
-  })
+  }
 
-  return annotation
+  key.subscribe((v) => {
+    reload(v)
+  })
+  return { annotation, reload }
 }
 
 export { useCurrentKey, useActiveAnnotation }

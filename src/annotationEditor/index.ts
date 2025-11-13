@@ -1,5 +1,6 @@
 import { mount } from 'svelte'
 import App from './AnnotationEditor.svelte'
+import '@/app.css'
 
 const app = mount(App, {
   target: document.getElementById('app')!,

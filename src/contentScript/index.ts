@@ -143,7 +143,6 @@ const installKeyMaps = () => {
 }
 
 async function main() {
-  reloadWhenDOMChanged()
   reload()
 
   // installIconTip()
@@ -152,6 +151,15 @@ async function main() {
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'PAGENOTE:RELOAD') {
       reload()
+      return
+    }
+
+    if (message.type === 'PAGENOTE:JUMP') {
+      const doms = highlighter.getDoms()
+      const dom = doms.find((d) => d.dataset.highlightId === message.id)
+      if (dom) {
+        dom.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      }
     }
   })
   // Handle clicks on existing highlights to open side panel

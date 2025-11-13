@@ -51,6 +51,7 @@ type BizRequest =
   | { type: 'PAGENOTE:DELETE'; key: string; id: string; deleted: boolean }
   | { type: 'PAGENOTE:CLEAR'; key: string }
   | { type: 'PAGENOTE:OPEN_SIDEPANEL'; key: string; id?: string }
+  | { type: 'PAGENOTE:JUMP'; key: string; id: string; tabId: number }
   | { type: 'PAGENOTE:LOAD_ONE'; key: string; id: string }
 
 async function getActiveTabId() {
@@ -63,7 +64,7 @@ async function getActiveTabId() {
 
 const pickModel = async (request: BizRequest, senderTabId?: number) => {
   const tabId = senderTabId || (await getActiveTabId())
-  if (!tabId) {
+  if (!tabId || !request.key) {
     return
   }
 
@@ -153,6 +154,9 @@ chrome.runtime.onMessage.addListener((request: BizRequest, sender, rawSendRespon
         } catch (error) {
           sendResponse({ error: 'Failed to delete annotation' })
         }
+        break
+      case 'PAGENOTE:JUMP':
+        chrome.tabs.sendMessage(request.tabId, request)
         break
       default:
         return false
