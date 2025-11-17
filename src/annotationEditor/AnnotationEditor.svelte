@@ -92,7 +92,7 @@
           rows="5"
         ></textarea>
       {:else if $activeAnnotation.memo}
-        <pre>{$activeAnnotation.memo}</pre>
+        <pre class="whitespace-pre-line">{$activeAnnotation.memo}</pre>
       {/if}
     </div>
 

@@ -1,5 +1,7 @@
 # PageNote
 
+> A chrome plugin for personal use, feel free to fork
+
 Page Note is a chrome extension for annotating text on web pages.
 
 You can select text and annotate it with color and text notes. The notes are saved in a local database and can be replayed when page reopened.
